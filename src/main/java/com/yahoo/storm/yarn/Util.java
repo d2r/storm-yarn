@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -67,7 +68,7 @@ class Util {
       String ret = System.getProperty("storm.home");
       if (ret == null) {
         throw new RuntimeException("storm.home is not set");
-      }       
+      }
       return ret;
   }
 
@@ -112,11 +113,14 @@ class Util {
 
   @SuppressWarnings("rawtypes")
   static Path createConfigurationFileInFs(FileSystem fs,
-          Map stormConf) throws IOException {
+          Map stormConf, YarnConfiguration yarnConf) throws IOException {
     // dump stringwriter's content into FS conf/storm.yaml
     Path confDst = new Path(STORM_CONF_PATH_STRING);
     Path dirDst = confDst.getParent();
     fs.mkdirs(dirDst);
+    
+    //storm.yaml
+    Path confDst = new Path(dirDst, "storm.yaml");
     FSDataOutputStream out = fs.create(confDst);
     Yaml yaml = new Yaml();
     OutputStreamWriter writer = new OutputStreamWriter(out);
@@ -124,6 +128,15 @@ class Util {
     yaml.dump(stormConf, writer);
     writer.close();
     out.close();
+
+    //yarn-site.xml
+    Path yarn_site_xml = new Path(dirDst, "yarn-site.xml");
+    out = fs.create(yarn_site_xml);
+    writer = new OutputStreamWriter(out);
+    yarnConf.writeXml(writer);
+    writer.close();
+    out.close();   
+    
     return dirDst;
   } 
 

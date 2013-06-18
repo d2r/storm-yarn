@@ -170,7 +170,7 @@ class StormAMRMClient extends AMRMClientImpl {
         LocalResourceType.ARCHIVE, LocalResourceVisibility.PUBLIC));
     
     Path dirDst =
-        Util.createConfigurationFileInFs(fs, this.storm_conf);
+        Util.createConfigurationFileInFs(fs, this.storm_conf, this.hadoopConf);
     
     localResources.put("conf", Util.newYarnAppResource(fs, dirDst));
     

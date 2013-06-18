@@ -118,7 +118,7 @@ public class Client {
         if(command == null) {
             LOG.error("ERROR: " + commandName + " is not a supported command.");
             help.printHelpFor(null);
-            System.exit(100);
+            System.exit(1);
         }
         Options opts = command.getOpts();
         if(!opts.hasOption("h")) {
