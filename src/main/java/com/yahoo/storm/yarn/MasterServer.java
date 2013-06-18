@@ -28,6 +28,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -54,7 +55,7 @@ public class MasterServer extends ThriftServer {
     private static ApplicationAttemptId _appAttemptID;
     private StormMasterServerHandler _handler;
 
-    private Thread initAndStartHeartbeat(final StormAMRMClient client,
+    private static Thread initAndStartHeartbeat(final StormAMRMClient client,
             final BlockingQueue<Container> launcherQueue,
             final int heartBeatIntervalMs) {
         Thread thread = new Thread() {
@@ -94,10 +95,19 @@ public class MasterServer extends ThriftServer {
                 LOG.debug("HB: Containers completed (" + completedContainers.size() + "), so releasing them.");
                 client.startAllSupervisors();
               }
+            
             }
-          };
-        thread.start();
-        return thread;
+          } catch (Throwable t) {
+            // Something happened we could not handle.  Make sure the AM goes
+            // down so that we are not surprised later on that our heart
+            // stopped..
+            t.printStackTrace();
+            System.exit(1);
+          }
+        }
+      };
+      thread.start();
+      return thread;
     }
 
     @SuppressWarnings("unchecked")
@@ -144,7 +154,6 @@ public class MasterServer extends ThriftServer {
             final int port = Utils.getInt(storm_conf.get(Config.MASTER_THRIFT_PORT));
             final String target = host + ":" + port;
             InetSocketAddress addr = NetUtils.createSocketAddr(target);
-            int port = Utils.getInt(storm_conf.get(Config.MASTER_THRIFT_PORT));
             RegisterApplicationMasterResponse resp =
                     rmClient.registerApplicationMaster(addr.getHostName(), port, null);
             LOG.info("Got a registration response "+resp);
@@ -218,18 +227,21 @@ public class MasterServer extends ThriftServer {
                 Utils.getInt(storm_conf.get(Config.MASTER_THRIFT_PORT)));
         try {
             _handler = handler;
+            
+            LOG.info("launch nimbus");
             _handler.startNimbus();
+
+            LOG.info("launch ui");
             _handler.startUI();
 
             int numSupervisors =
                     Utils.getInt(storm_conf.get(Config.MASTER_NUM_SUPERVISORS));
             LOG.info("launch " + numSupervisors + " supervisors");
             _handler.addSupervisors(numSupervisors);
-
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }   
+    }
 
     public void stop() {
         super.stop();

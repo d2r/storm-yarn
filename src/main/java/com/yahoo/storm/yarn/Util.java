@@ -120,7 +120,6 @@ class Util {
     fs.mkdirs(dirDst);
     
     //storm.yaml
-    Path confDst = new Path(dirDst, "storm.yaml");
     FSDataOutputStream out = fs.create(confDst);
     Yaml yaml = new Yaml();
     OutputStreamWriter writer = new OutputStreamWriter(out);
